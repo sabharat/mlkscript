@@ -10,7 +10,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import mlk.db.DBConnection;
+import org.apache.log4j.Logger;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+
+import mlk.db.DBHandler;
 
 /*In Promo delivery update, status 3 is the intermediate status during change to status 4 or 5. 
  * But sometimes some loads stuck at status 3 without updating. We have to later find these loads and manually 
@@ -20,13 +24,14 @@ import mlk.db.DBConnection;
 @author - Bharat Saini*/
 
 public class MlkStuckStatusUpdate {
-	static Connection con = null;
+	static JdbcTemplate jdbcTemplate = null;
 
 	public static void main(String[] args) {
-	
-		DBConnection dbc = new DBConnection();
-		con = dbc.getConnection();
-		if (con == null) {
+	Logger lgr = Logger.getLogger(MlkStuckStatusUpdate.class);
+	lgr.debug("Starting Application");
+		DBHandler dbc = new DBHandler();
+		jdbcTemplate = dbc.getJdbcTemplate();
+		if (jdbcTemplate == null) {
 			System.out.print("Unable to establish DB Connection. Exiting");
 			return;
 		}
@@ -45,8 +50,8 @@ public class MlkStuckStatusUpdate {
 				msisdnto4.add(entry.getKey());
 			}
 		}
-       boolean status5updated=false;
-       boolean status4updated=false;
+       int status5updated=0;
+       int status4updated=0;
 
 		if (msisdnto5.size() > 0) {
 			status5updated = updateToStatus5(msisdnto5);
@@ -55,99 +60,75 @@ public class MlkStuckStatusUpdate {
 			status4updated = updateToStatus4(msisdnto4);
 		}
 		System.out.println("UPDATION INFO :::: Status5Updated="+status5updated+", Status4Updated="+status4updated);
-		dbc.closeConnection();
+		
 	}
 
 	private static Map<Integer, String> getStuckRecordsStatus3() {
 		Map<Integer, String> map = new HashMap<Integer, String>();
 		String sql = "select SERVICE_TYPE, msisdn from prepaidmlk_owner.services"
-				+ " where status ='3'and Expiry_date > sysdate() order by created_date desc";
-		Statement stmt = null;
-		ResultSet rs = null;
-		try {
-			stmt = con.createStatement();
-			rs = stmt.executeQuery(sql);
-			while (rs.next()) {
-				String servicetype = rs.getString("SERVICE_TYPE");
-				int msisdn = rs.getInt("msisdn");
-				map.put(msisdn, servicetype);
-			}
-			return map;
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
-		} finally {
-			if (rs != null)
-				try {
-					rs.close();
-				} catch (SQLException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-		}
+				+ " where status ='3'and Expiry_date > sysdate() order by created_date desc";		
+		
+		 List<Service> listService = jdbcTemplate.query(sql, new RowMapper<Service>() {
+			 
+	            public Service mapRow(ResultSet result, int rowNum) throws SQLException {
+	            	Service service = new Service();
+	            	service.setServiceType(result.getString("SERVICE_TYPE"));
+	            	service.setMsisdn(result.getInt("MSISDN"));	            	
+	                return service;
+	            }
+	             
+	        });
+	         
+	        for (Service aService : listService) {
+	            map.put(aService.getMsisdn(), aService.getServiceType());
+	        }
+	        return map;
 	}
 
 	private static String getOldServiceType(Integer msisdn) {
+		String oldServiceType=null;
 		String sql = "select SERVICE_TYPE from prepaidmlk_owner.services where MSISDN=" + msisdn
 				+ " AND STATUS=6 ORDER BY CREATED_DATE DESC LIMIT 1";
-		String servicetype = null;
-		Statement stmt = null;
-		ResultSet rs = null;
-		try {
-			stmt = con.createStatement();
-			rs = stmt.executeQuery(sql);
-			while (rs.next()) {
-				servicetype = rs.getString("SERVICE_TYPE");
-			}
-			return servicetype;
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
-		}finally {
-			if (rs != null)
-				try {
-					rs.close();
-				} catch (SQLException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-		}
+		
+		 List<Service> listService = jdbcTemplate.query(sql, new RowMapper<Service>() {
+			 
+	            public Service mapRow(ResultSet result, int rowNum) throws SQLException {
+	            	Service service = new Service();
+	            	service.setServiceType(result.getString("SERVICE_TYPE"));
+	                return service;
+	            }
+	             
+	        });
+	         
+	        for (Service aService : listService) {
+	           oldServiceType = aService.getServiceType();
+	        }
+		return oldServiceType;
+	
 	}
 
 	// WILL UPDATE CONTENTS OF @msisdnto5 TO STATUS 5
-	private static boolean updateToStatus5(List<Integer> msisdnto5) {
+	private static int updateToStatus5(List<Integer> msisdnto5) {
+		int rowsAffected=0;
 		String commaSeparated = join(msisdnto5, ",");
 		String sql = "update prepaidmlk_owner.services set status = 5 where "
 				+ "status = 3 and msisdn in ("+commaSeparated+")";
-		try {
-			Statement stmt = con.createStatement();
-			stmt.executeUpdate(sql);
-			System.out.println("Successfully updated to Status5 - "+commaSeparated);
-			return true;
-		} catch (SQLException e) {
-			e.printStackTrace();
-			System.out.println("Failed to Update to status 5");
-			return false;
-		}
+		
+		rowsAffected=jdbcTemplate.update(sql);
+			System.out.println("Executed for Status5 - "+commaSeparated);
+			return rowsAffected;
+		
 	}
 
 	// WILL UPDATE CONTENTS OF @msisdnto4 TO STATUS 4
-	private static boolean updateToStatus4(List<Integer> msisdnto4) {
+	private static int updateToStatus4(List<Integer> msisdnto4) {
+		int rowsAffected=0;
 		String commaSeparated = join(msisdnto4, ",");
 		String sql = "Update prepaidmlk_owner.services set status = 4, promo_delivery_count=0, "
 				+ "last_promo_delivery_time= sysdate() where status = 3 and msisdn in ("+commaSeparated+")";
-		try {
-			Statement stmt = con.createStatement();
-			stmt.executeUpdate(sql);
-			System.out.println("Successfully updated to Status4 - "+commaSeparated);
-			return true;
-		} catch (SQLException e) {
-			e.printStackTrace();
-			System.out.println("Failed to Update to status 4");
-			return false;
-		}
+		rowsAffected = jdbcTemplate.update(sql);
+			System.out.println("Executed for Status4 - "+commaSeparated);
+			return rowsAffected;
 	}
 
 	public static String join(List list, String delim) {
