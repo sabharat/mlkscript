@@ -17,7 +17,7 @@ import com.mysql.jdbc.*;
 
 public class DBHandler {
 
-	private static final String PROP_FILE_PATH = ".\\src\mlk\dbconnection.properties";
+	private static final String PROP_FILE_PATH = "/home/bharat/mytestworkspace/MlkStuckStatus/src/mlk/dbconnection.properties";
 	
 	Properties prop = null;
 

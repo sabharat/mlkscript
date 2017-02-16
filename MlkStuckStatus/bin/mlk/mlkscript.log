@@ -1,5 +1,0 @@
-2017-02-16 04:00:27 DEBUG MlkStuckStatusUpdate:31 - Starting Application
-2017-02-16 04:00:27 DEBUG JdbcTemplate:451 - Executing SQL query [select SERVICE_TYPE, msisdn from prepaidmlk_owner.services where status ='3'and Expiry_date > sysdate() order by created_date desc]
-2017-02-16 04:00:27 DEBUG DataSourceUtils:110 - Fetching JDBC Connection from DataSource
-2017-02-16 04:00:27 DEBUG SimpleDriverDataSource:138 - Creating new JDBC Driver Connection to [jdbc:mysql://localhost:3306/prepaidmlk_owner]
-2017-02-16 04:00:28 DEBUG DataSourceUtils:327 - Returning JDBC Connection to DataSource
