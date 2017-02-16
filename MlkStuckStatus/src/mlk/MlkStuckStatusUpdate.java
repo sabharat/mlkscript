@@ -27,12 +27,12 @@ public class MlkStuckStatusUpdate {
 	static JdbcTemplate jdbcTemplate = null;
 
 	public static void main(String[] args) {
-	Logger lgr = Logger.getLogger(MlkStuckStatusUpdate.class);
-	lgr.debug("Starting Application");
+	Logger logger = Logger.getLogger(MlkStuckStatusUpdate.class);
+	logger.info("Starting Application");
 		DBHandler dbc = new DBHandler();
 		jdbcTemplate = dbc.getJdbcTemplate();
 		if (jdbcTemplate == null) {
-			System.out.print("Unable to establish DB Connection. Exiting");
+			logger.error("Unable to establish DB Connection. Exiting");
 			return;
 		}
 		

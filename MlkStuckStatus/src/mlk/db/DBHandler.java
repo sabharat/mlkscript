@@ -34,6 +34,7 @@ public class DBHandler {
 		SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
 		try {
 			dataSource.setDriver(new com.mysql.jdbc.Driver());
+			//dataSource.setDriver(new oracle.jdbc.driver.OracleDriver());
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
