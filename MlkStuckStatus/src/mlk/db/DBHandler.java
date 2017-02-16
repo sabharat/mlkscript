@@ -9,46 +9,41 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.SimpleDriverDataSource;
+
 import com.mysql.jdbc.*;
 
-public class DBConnection {
+public class DBHandler {
 
 	private static final String PROP_FILE_PATH = "/home/bharat/mytestworkspace/MlkStuckStatus/src/mlk/dbconnection.properties";
-	Logger lgr = Logger.getLogger(DBConnection.class.getName()); // trigger java logger
-	Connection con = null;
+	
 	Properties prop = null;
 
-	public Connection getConnection() {
+	public JdbcTemplate getJdbcTemplate() {
 		if (prop == null) {
 			this.loadProperties();
 		}
-
+		
 		String url = prop.getProperty("jdbc.url");
 		String user = prop.getProperty("jdbc.username");
 		String password = prop.getProperty("jdbc.password");
 		String driverclass = prop.getProperty("jdbc.driverClassName");
 
+		SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
 		try {
-
-			Class.forName(driverclass).newInstance();
-			con = DriverManager.getConnection(url, user, password);
-			System.out.println("Database connection established");
-		} catch (Exception ex) {
-			lgr.log(Level.SEVERE, ex.getMessage(), ex);
+			dataSource.setDriver(new com.mysql.jdbc.Driver());
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		return con;
-
-	}
-
-	public void closeConnection() {
-		if (con != null) {
-			try {
-				con.close();
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
+        dataSource.setUrl(url);
+        dataSource.setUsername(user);
+        dataSource.setPassword(password);
+		JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);		
+		
+		return jdbcTemplate;
 
 	}
 
@@ -63,11 +58,11 @@ public class DBConnection {
 			prop.load(in);
 
 		} catch (FileNotFoundException ex) {
-			lgr.log(Level.SEVERE, ex.getMessage(), ex);
+			
 					}
 
 		catch (IOException ex) {
-			lgr.log(Level.SEVERE, ex.getMessage(), ex);
+		
 		}
 
 		finally {
@@ -77,7 +72,7 @@ public class DBConnection {
 				}
 
 			} catch (IOException ex) {
-				lgr.log(Level.SEVERE, ex.getMessage(), ex);
+				
 
 			}
 		}
